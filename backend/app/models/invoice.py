@@ -1,5 +1,6 @@
 from app import db
 from datetime import datetime
+import json
 
 
 class Invoice(db.Model):
@@ -15,6 +16,7 @@ class Invoice(db.Model):
     due_date = db.Column(db.String(20), nullable=True)
     deel_ref = db.Column(db.String(100), nullable=True)
     status = db.Column(db.String(20), nullable=False, default="unpaid")  # paid | unpaid
+    parsed_data = db.Column(db.Text, nullable=True)  # JSON snapshot for PDF regeneration
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):

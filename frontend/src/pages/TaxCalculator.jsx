@@ -36,26 +36,27 @@ function calcTax(income, slabs) {
   return { tax, breakdown }
 }
 
-function computeTax(grossInr, regime, is44ADA) {
-  // 44ADA: 50% of gross is taxable (presumptive scheme)
-  const taxableIncome = is44ADA ? grossInr * 0.5 : grossInr
+function computeTax(grossInr, otherInr, regime, is44ADA) {
+  // 44ADA applies only to professional income
+  const professionalTaxable = is44ADA ? grossInr * 0.5 : grossInr
+  // Other income is always 100% taxable
+  const totalTaxable = professionalTaxable + otherInr
 
   const slabs = regime === 'new' ? NEW_SLABS : OLD_SLABS
-  let { tax, breakdown } = calcTax(taxableIncome, slabs)
+  let { tax, breakdown } = calcTax(totalTaxable, slabs)
 
-  // Standard deduction (old regime only)
   const stdDeduction = regime === 'old' ? 50000 : 0
 
   // Rebate u/s 87A
   let rebate = 0
-  if (regime === 'new' && taxableIncome <= 700000) rebate = Math.min(tax, 25000)
-  if (regime === 'old' && taxableIncome <= 500000) rebate = Math.min(tax, 12500)
+  if (regime === 'new' && totalTaxable <= 700000) rebate = Math.min(tax, 25000)
+  if (regime === 'old' && totalTaxable <= 500000) rebate = Math.min(tax, 12500)
 
   const taxAfterRebate = Math.max(0, tax - rebate)
   const cess = taxAfterRebate * 0.04
   const totalTax = taxAfterRebate + cess
 
-  return { taxableIncome, breakdown, tax, rebate, cess, totalTax, stdDeduction }
+  return { professionalTaxable, otherInr, totalTaxable, breakdown, tax, rebate, cess, totalTax, stdDeduction }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -79,6 +80,7 @@ export default function TaxCalculator() {
   const [forexRate, setForexRate] = useState('')
   const [loadingForex, setLoadingForex] = useState(false)
   const [is44ADA, setIs44ADA] = useState(true)
+  const [otherSources, setOtherSources] = useState([])
   const [result, setResult] = useState(null)
 
   // Auto-fill from invoice stats
@@ -102,15 +104,28 @@ export default function TaxCalculator() {
     }
   }
 
+  function addOtherSource() {
+    setOtherSources(prev => [...prev, { id: Date.now(), label: '', amount: '' }])
+  }
+
+  function updateOtherSource(id, field, value) {
+    setOtherSources(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s))
+  }
+
+  function removeOtherSource(id) {
+    setOtherSources(prev => prev.filter(s => s.id !== id))
+  }
+
   function calculate() {
     const usd = parseFloat(grossUSD)
     const rate = parseFloat(forexRate)
     if (!usd || !rate) return toast.error('Enter gross income and forex rate')
 
     const grossInr = usd * rate
-    const newResult = computeTax(grossInr, 'new', is44ADA)
-    const oldResult = computeTax(grossInr, 'old', is44ADA)
-    setResult({ grossInr, newResult, oldResult })
+    const otherInr = otherSources.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0)
+    const newResult = computeTax(grossInr, otherInr, 'new', is44ADA)
+    const oldResult = computeTax(grossInr, otherInr, 'old', is44ADA)
+    setResult({ grossInr, otherInr, newResult, oldResult })
   }
 
   const RegimeCard = ({ label, res, recommended }) => (
@@ -120,9 +135,11 @@ export default function TaxCalculator() {
         {recommended && <span className="text-[10px] bg-gold-400 text-ink-900 font-bold px-2 py-0.5 rounded-full">BETTER</span>}
       </div>
       <div className="space-y-0.5">
-        <ResultRow label="Gross Income" value={fmtINR(result.grossInr)} />
-        {res.stdDeduction > 0 && <ResultRow label="Std. Deduction" value={`− ${fmtINR(res.stdDeduction)}`} />}
-        {is44ADA && <ResultRow label="44ADA (50% taxable)" value={fmtINR(res.taxableIncome)} highlight />}
+        <ResultRow label="Gross Income (Professional)" value={fmtINR(result.grossInr)} />
+        {is44ADA && <ResultRow label="44ADA (50% taxable)" value={fmtINR(res.professionalTaxable)} highlight />}
+        {!is44ADA && res.stdDeduction > 0 && <ResultRow label="Std. Deduction" value={`− ${fmtINR(res.stdDeduction)}`} />}
+        {res.otherInr > 0 && <ResultRow label="Other Income" value={`+ ${fmtINR(res.otherInr)}`} />}
+        {(is44ADA || res.otherInr > 0) && <ResultRow label="Total Taxable Income" value={fmtINR(res.totalTaxable)} bold />}
         <div className="border-t border-ink-100 my-2" />
         {res.breakdown.map((b, i) => (
           <div key={i} className="flex justify-between text-xs text-ink-400 py-0.5">
@@ -211,6 +228,51 @@ export default function TaxCalculator() {
           </div>
         </div>
 
+        {/* Other income sources */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[10px] font-semibold uppercase tracking-widest text-ink-400">
+              Other Income Sources <span className="normal-case text-ink-300">(not eligible for 44ADA)</span>
+            </label>
+            <button onClick={addOtherSource}
+              className="text-xs text-gold-500 hover:text-gold-600 font-semibold transition-colors">
+              + Add Source
+            </button>
+          </div>
+          {otherSources.length === 0 && (
+            <p className="text-xs text-ink-300 italic">e.g. interest income, rent, salary, capital gains…</p>
+          )}
+          <div className="space-y-2">
+            {otherSources.map(src => (
+              <div key={src.id} className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  value={src.label}
+                  onChange={e => updateOtherSource(src.id, 'label', e.target.value)}
+                  placeholder="Source (e.g. Interest income)"
+                  className="flex-[2] px-3 py-2 bg-ink-50 border border-ink-200 rounded-lg text-sm text-ink-800 placeholder-ink-300 focus:outline-none focus:ring-2 focus:ring-gold-400/40 focus:border-gold-400 transition"
+                />
+                <input
+                  type="number"
+                  value={src.amount}
+                  onChange={e => updateOtherSource(src.id, 'amount', e.target.value)}
+                  placeholder="Amount (INR)"
+                  className="flex-1 px-3 py-2 bg-ink-50 border border-ink-200 rounded-lg text-sm font-mono text-ink-800 placeholder-ink-300 focus:outline-none focus:ring-2 focus:ring-gold-400/40 focus:border-gold-400 transition"
+                />
+                <button onClick={() => removeOtherSource(src.id)}
+                  className="p-2 text-ink-300 hover:text-red-500 transition-colors text-lg leading-none">×</button>
+              </div>
+            ))}
+          </div>
+          {otherSources.length > 0 && (
+            <div className="flex justify-end mt-2 text-xs text-ink-500">
+              Total other income: <span className="font-mono font-semibold ml-1">
+                {fmtINR(otherSources.reduce((s, x) => s + (parseFloat(x.amount) || 0), 0))}
+              </span>
+            </div>
+          )}
+        </div>
+
         {/* 44ADA toggle */}
         <div className="flex items-start gap-3 p-4 bg-gold-400/5 border border-gold-400/30 rounded-lg mb-5">
           <input
@@ -245,7 +307,8 @@ export default function TaxCalculator() {
             <Info size={14} className="text-ink-400" />
             <p className="text-xs text-ink-400">
               Gross ₹{(result.grossInr / 100000).toFixed(2)}L
-              {is44ADA && ` → 44ADA taxable ₹${(result.newResult.taxableIncome / 100000).toFixed(2)}L`}
+              {is44ADA && ` → 44ADA taxable ₹${(result.newResult.professionalTaxable / 100000).toFixed(2)}L`}
+              {result.otherInr > 0 && ` + other income ₹${(result.otherInr / 100000).toFixed(2)}L`}
               {' '}· FY 2025-26 slabs · 4% cess included
             </p>
           </div>
