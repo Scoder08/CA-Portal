@@ -2,6 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from dotenv import load_dotenv
+from sqlalchemy import text, inspect
 import os
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"), override=True)
@@ -29,6 +30,14 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
 
     with app.app_context():
+        # Drop any orphaned sequences left by previous failed deploys
+        # so that db.create_all() can recreate them cleanly with the table.
+        insp = inspect(db.engine)
+        with db.engine.begin() as conn:
+            for table in db.metadata.tables:
+                if not insp.has_table(table):
+                    seq = f"{table}_id_seq"
+                    conn.execute(text(f"DROP SEQUENCE IF EXISTS {seq}"))
         db.create_all()
         from app.models.settings import Settings
         Settings.seed_defaults()
