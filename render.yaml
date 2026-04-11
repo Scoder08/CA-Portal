@@ -5,7 +5,7 @@ services:
     plan: free
     rootDir: backend
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /api/auth/verify
+    healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
         sync: false          # paste your Neon connection string here

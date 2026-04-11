@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -28,6 +28,10 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(invoice_bp, url_prefix="/api/invoice")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
+
+    @app.route("/api/health")
+    def health():
+        return jsonify({"status": "ok"})
 
     with app.app_context():
         # Drop any orphaned sequences left by previous failed deploys
