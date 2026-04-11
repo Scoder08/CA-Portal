@@ -8,6 +8,10 @@ from datetime import datetime
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "invoice")
 
+# Cache Jinja2 env + template at module load — avoid re-parsing on every request
+_jinja_env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+_invoice_template = _jinja_env.get_template("template.html")
+
 
 def _format_date(date_str: str) -> str:
     """Convert YYYY-MM-DD to DD MMM YYYY for display."""
@@ -88,9 +92,7 @@ def render_invoice_pdf(parsed_data: dict, user_id: int) -> bytes:
         "deel_ref": parsed_data.get("deel_ref", ""),
     }
 
-    env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
-    template = env.get_template("template.html")
-    html_str = template.render(**context)
+    html_str = _invoice_template.render(**context)
 
     pdf_bytes = HTML(string=html_str, base_url=TEMPLATE_DIR).write_pdf()
     return pdf_bytes, invoice_number

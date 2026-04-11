@@ -16,6 +16,11 @@ def create_app():
 
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///ca_portal.db")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,      # drop stale connections before use
+        "pool_recycle": 300,        # recycle connections every 5 min
+        "connect_args": {"connect_timeout": 10},
+    }
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-change-in-prod")
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB upload limit
 

@@ -81,7 +81,16 @@ class Settings(db.Model):
             "logo_base64": "",
             "signature_base64": "",
         }
-        for key, value in defaults.items():
-            if not cls.query.filter_by(user_id=user_id, key=key).first():
-                db.session.add(cls(user_id=user_id, key=key, value=json.dumps(value)))
-        db.session.commit()
+        # Single query to find which keys already exist
+        existing = {
+            row.key for row in cls.query.filter_by(user_id=user_id)
+            .with_entities(cls.key).all()
+        }
+        new_rows = [
+            cls(user_id=user_id, key=key, value=json.dumps(value))
+            for key, value in defaults.items()
+            if key not in existing
+        ]
+        if new_rows:
+            db.session.add_all(new_rows)
+            db.session.commit()

@@ -7,6 +7,9 @@ import fitz  # PyMuPDF
 
 logger = logging.getLogger(__name__)
 
+# Module-level singleton — avoids re-initialising on every request
+_openai_client = openai.OpenAI()
+
 # In-memory cache: sha256(pdf_bytes) -> parsed dict
 _parse_cache: dict[str, dict] = {}
 
@@ -31,8 +34,6 @@ def parse_deel_invoice(pdf_bytes: bytes) -> dict:
         return _parse_cache[key]
 
     logger.info("parse cache miss — calling OpenAI")
-    client = openai.OpenAI()
-
     text = _extract_text(pdf_bytes)
 
     prompt = f"""Extract all invoice data from the following Deel invoice text and return ONLY a JSON object with these exact fields:
@@ -72,7 +73,7 @@ Return ONLY the JSON, no markdown, no explanation.
 Invoice text:
 {text}"""
 
-    response = client.chat.completions.create(
+    response = _openai_client.chat.completions.create(
         model="gpt-4o-mini",
         max_tokens=1500,
         messages=[{"role": "user", "content": prompt}],
