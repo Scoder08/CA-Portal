@@ -1,11 +1,10 @@
 services:
   - type: web
     name: ca-portal-backend
-    runtime: python
+    runtime: docker
     plan: free
     rootDir: backend
-    buildCommand: bash build.sh
-    startCommand: gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /api/auth/verify
     envVars:
       - key: DATABASE_URL
