@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: ca-portal-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: bash build.sh
+    startCommand: gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    healthCheckPath: /api/auth/verify
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ca-portal-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PORTAL_PASSWORD
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+databases:
+  - name: ca-portal-db
+    plan: free

@@ -3,6 +3,6 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "env": {
-    "VITE_API_URL": "https://your-railway-app.railway.app/api"
+    "VITE_API_URL": "https://ca-portal-backend.onrender.com/api"
   }
 }

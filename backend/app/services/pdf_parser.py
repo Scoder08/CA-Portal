@@ -1,7 +1,18 @@
 import openai
 import json
 import re
+import hashlib
+import logging
 import fitz  # PyMuPDF
+
+logger = logging.getLogger(__name__)
+
+# In-memory cache: sha256(pdf_bytes) -> parsed dict
+_parse_cache: dict[str, dict] = {}
+
+
+def _pdf_hash(pdf_bytes: bytes) -> str:
+    return hashlib.sha256(pdf_bytes).hexdigest()
 
 
 def _extract_text(pdf_bytes: bytes) -> str:
@@ -12,7 +23,14 @@ def _extract_text(pdf_bytes: bytes) -> str:
 def parse_deel_invoice(pdf_bytes: bytes) -> dict:
     """
     Extract text from PDF with PyMuPDF, then parse with gpt-4o-mini.
+    Results are cached by PDF content hash to avoid redundant API calls.
     """
+    key = _pdf_hash(pdf_bytes)
+    if key in _parse_cache:
+        logger.info("parse cache hit (%s…)", key[:12])
+        return _parse_cache[key]
+
+    logger.info("parse cache miss — calling OpenAI")
     client = openai.OpenAI()
 
     text = _extract_text(pdf_bytes)
@@ -64,4 +82,6 @@ Invoice text:
     raw = re.sub(r"^```json\s*", "", raw)
     raw = re.sub(r"\s*```$", "", raw)
 
-    return json.loads(raw)
+    result = json.loads(raw)
+    _parse_cache[key] = result
+    return result

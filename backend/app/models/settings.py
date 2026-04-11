@@ -1,5 +1,10 @@
 from app import db
 import json
+import time
+
+_settings_cache: dict = {}
+_settings_cache_ts: float = 0.0
+_SETTINGS_TTL = 60  # seconds
 
 
 class Settings(db.Model):
@@ -32,6 +37,9 @@ class Settings(db.Model):
 
     @classmethod
     def get_all_as_dict(cls):
+        global _settings_cache, _settings_cache_ts
+        if _settings_cache and (time.time() - _settings_cache_ts) < _SETTINGS_TTL:
+            return _settings_cache
         rows = cls.query.all()
         result = {}
         for row in rows:
@@ -39,7 +47,15 @@ class Settings(db.Model):
                 result[row.key] = json.loads(row.value)
             except Exception:
                 result[row.key] = row.value
+        _settings_cache = result
+        _settings_cache_ts = time.time()
         return result
+
+    @classmethod
+    def invalidate_cache(cls):
+        global _settings_cache, _settings_cache_ts
+        _settings_cache = {}
+        _settings_cache_ts = 0.0
 
     @classmethod
     def seed_defaults(cls):

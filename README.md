@@ -18,7 +18,7 @@ cp .env.example .env
 # Fill in .env values (see below)
 
 python run.py
-# Runs on http://localhost:5000
+# Runs on http://localhost:5001
 ```
 
 **.env values to fill:**
@@ -27,7 +27,7 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/ca_portal
                           # or leave as sqlite:///ca_portal.db for local dev
 SECRET_KEY=any-long-random-string
 PORTAL_PASSWORD=password-your-CA-will-use
-ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-proj-...
 FRONTEND_URL=http://localhost:5173
 ```
 
@@ -37,8 +37,7 @@ FRONTEND_URL=http://localhost:5173
 cd frontend
 npm install
 
-# For local dev (proxies /api to localhost:5000 automatically)
-npm install
+# For local dev (proxies /api to localhost:5001 automatically)
 npm run dev
 # Runs on http://localhost:5173
 ```
@@ -47,22 +46,35 @@ npm run dev
 
 ## Deploy to Production
 
-### Backend → Railway
+### Backend → Render (free)
 
 1. Push the repo to GitHub
-2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
-3. Select the `backend/` folder (or set Root Directory to `backend`)
-4. Add a PostgreSQL plugin in Railway
-5. Set environment variables:
+2. Go to [render.com](https://render.com) → New → Blueprint → select this repo
+   - Render will auto-detect `render.yaml` and create the web service + database
+3. Set the following environment variables in the Render dashboard (under the service → Environment):
    ```
-   DATABASE_URL        → (Railway auto-fills this from the Postgres plugin)
-   SECRET_KEY          → generate with: python -c "import secrets; print(secrets.token_hex(32))"
-   PORTAL_PASSWORD     → your chosen password
-   ANTHROPIC_API_KEY   → from console.anthropic.com
-   FRONTEND_URL        → https://your-app.vercel.app
+   PORTAL_PASSWORD   → your chosen password
+   OPENAI_API_KEY    → from platform.openai.com/api-keys
+   FRONTEND_URL      → https://your-app.vercel.app
    ```
-6. Deploy. Railway auto-detects the Procfile.
-7. Note your Railway URL: `https://your-app.railway.app`
+   (`DATABASE_URL` and `SECRET_KEY` are handled automatically by `render.yaml`)
+4. Click **Apply**. First deploy takes ~5 min (installs system libs for WeasyPrint).
+5. Note your Render URL: `https://ca-portal-backend.onrender.com`
+
+> **Note:** Render's free web service spins down after 15 min of inactivity — first request
+> after idle takes ~30s to wake up. Free PostgreSQL is available for 90 days.
+
+#### Manual setup (without Blueprint)
+
+If you prefer to configure manually instead of using the Blueprint:
+
+1. New → Web Service → connect repo, set **Root Directory** to `backend`
+2. Build Command: `bash build.sh`
+3. Start Command: `gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120`
+4. Add a PostgreSQL database from the dashboard and link it
+5. Add environment variables as above
+
+---
 
 ### Frontend → Vercel
 
@@ -70,7 +82,7 @@ npm run dev
 2. Set Root Directory to `frontend`
 3. Add environment variable:
    ```
-   VITE_API_URL = https://your-app.railway.app/api
+   VITE_API_URL = https://ca-portal-backend.onrender.com/api
    ```
 4. Deploy. Done.
 5. Share the Vercel URL with your CA.
@@ -82,10 +94,11 @@ npm run dev
 1. Your CA opens the Vercel URL
 2. Enters the portal password
 3. Uploads the Deel invoice PDF
-4. Claude AI parses all fields automatically
+4. AI parses all fields automatically
 5. CA reviews/edits any fields if needed
-6. Clicks "Generate & Download Invoice PDF"
-7. Invoice is ready for STPI SOFTEX upload
+6. Clicks "Preview Invoice PDF" → reviews the generated invoice
+7. Clicks "Download Invoice"
+8. Invoice is ready for STPI SOFTEX upload
 
 ---
 
@@ -117,7 +130,7 @@ Go to `/admin` to update:
 | Frontend | React 18 + Vite + Tailwind CSS |
 | Backend | Flask 3 + SQLAlchemy |
 | Database | PostgreSQL (SQLite for local dev) |
-| PDF Parse | Anthropic Claude API |
+| PDF Parse | OpenAI gpt-4o-mini + PyMuPDF |
 | PDF Generate | WeasyPrint + Jinja2 |
 | Auth | JWT (simple password) |
-| Deploy | Vercel (FE) + Railway (BE) |
+| Deploy | Vercel (FE) + Render (BE) |

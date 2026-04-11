@@ -43,6 +43,7 @@ def update_settings():
         Settings.set(key, value)
         updated.append(key)
 
+    Settings.invalidate_cache()
     return jsonify({"success": True, "updated": updated})
 
 
@@ -63,6 +64,7 @@ def upload_image():
 
     key = f"{image_type}_base64"
     Settings.set(key, b64)
+    Settings.invalidate_cache()
 
     return jsonify({"success": True, "key": key, "size_bytes": len(file_bytes)})
 
@@ -74,4 +76,5 @@ def reset_settings():
     db.session.query(Settings).delete()
     db.session.commit()
     Settings.seed_defaults()
+    Settings.invalidate_cache()
     return jsonify({"success": True, "message": "Settings reset to defaults"})
