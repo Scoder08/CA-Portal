@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from app.routes.auth import require_auth
 from app.models.settings import Settings
 from app import db
@@ -18,15 +18,7 @@ ALLOWED_KEYS = {
 @admin_bp.route("/settings", methods=["GET"])
 @require_auth
 def get_settings():
-    settings = Settings.get_all_as_dict()
-    # Mask base64 blobs in response for size — send a flag instead
-    safe = {}
-    for k, v in settings.items():
-        if k in ("logo_base64", "signature_base64"):
-            safe[k] = v  # keep full base64 for preview
-        else:
-            safe[k] = v
-    return jsonify(safe)
+    return jsonify(Settings.get_all_as_dict(g.user_id))
 
 
 @admin_bp.route("/settings", methods=["PUT"])
@@ -40,31 +32,28 @@ def update_settings():
     for key, value in data.items():
         if key not in ALLOWED_KEYS:
             continue
-        Settings.set(key, value)
+        Settings.set(g.user_id, key, value)
         updated.append(key)
 
-    Settings.invalidate_cache()
+    Settings.invalidate_cache(g.user_id)
     return jsonify({"success": True, "updated": updated})
 
 
 @admin_bp.route("/settings/upload-image", methods=["POST"])
 @require_auth
 def upload_image():
-    """Upload logo or signature image, stores as base64."""
-    image_type = request.form.get("type")  # "logo" or "signature"
+    image_type = request.form.get("type")
     if image_type not in ("logo", "signature"):
         return jsonify({"error": "type must be 'logo' or 'signature'"}), 400
-
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
-    file = request.files["file"]
-    file_bytes = file.read()
+    file_bytes = request.files["file"].read()
     b64 = base64.b64encode(file_bytes).decode("utf-8")
 
     key = f"{image_type}_base64"
-    Settings.set(key, b64)
-    Settings.invalidate_cache()
+    Settings.set(g.user_id, key, b64)
+    Settings.invalidate_cache(g.user_id)
 
     return jsonify({"success": True, "key": key, "size_bytes": len(file_bytes)})
 
@@ -72,9 +61,8 @@ def upload_image():
 @admin_bp.route("/settings/reset", methods=["POST"])
 @require_auth
 def reset_settings():
-    """Reset all settings to defaults."""
-    db.session.query(Settings).delete()
+    db.session.query(Settings).filter_by(user_id=g.user_id).delete()
     db.session.commit()
-    Settings.seed_defaults()
-    Settings.invalidate_cache()
+    Settings.seed_defaults(g.user_id)
+    Settings.invalidate_cache(g.user_id)
     return jsonify({"success": True, "message": "Settings reset to defaults"})

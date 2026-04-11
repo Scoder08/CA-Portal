@@ -31,11 +31,11 @@ def generate_invoice_number(original_ref: str, prefix: str = "INV") -> str:
     return f"{prefix}-{year}-{seq}"
 
 
-def render_invoice_pdf(parsed_data: dict) -> bytes:
+def render_invoice_pdf(parsed_data: dict, user_id: int) -> bytes:
     """
     Take parsed invoice data + settings, render HTML template, return PDF bytes.
     """
-    settings = Settings.get_all_as_dict()
+    settings = Settings.get_all_as_dict(user_id)
 
     invoice_prefix = settings.get("invoice_prefix", "INV")
     invoice_number = generate_invoice_number(

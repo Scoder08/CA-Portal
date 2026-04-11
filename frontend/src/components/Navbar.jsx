@@ -4,9 +4,11 @@ import { FileText, Settings, LogOut } from 'lucide-react'
 export default function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
+  const user = JSON.parse(localStorage.getItem('ca_user') || '{}')
 
   function logout() {
     localStorage.removeItem('ca_token')
+    localStorage.removeItem('ca_user')
     navigate('/login')
   }
 
@@ -49,9 +51,14 @@ export default function Navbar() {
             <Settings size={14} />
             Settings
           </Link>
+          {user.name && (
+            <span className="text-xs text-ink-400 font-medium px-2 border-l border-ink-200 ml-1">
+              {user.name}
+            </span>
+          )}
           <button
             onClick={logout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-ink-400 hover:text-ink-800 hover:bg-ink-50 transition-colors ml-2"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-ink-400 hover:text-ink-800 hover:bg-ink-50 transition-colors ml-1"
           >
             <LogOut size={14} />
             Logout

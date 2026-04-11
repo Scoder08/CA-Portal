@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, g
 from app.routes.auth import require_auth
 from app.services.pdf_parser import parse_deel_invoice
 from app.services.invoice_generator import render_invoice_pdf
@@ -43,7 +43,7 @@ def generate_invoice():
 
     logger.info("Generating invoice from parsed data")
     try:
-        pdf_bytes, invoice_number = render_invoice_pdf(parsed_data)
+        pdf_bytes, invoice_number = render_invoice_pdf(parsed_data, g.user_id)
         logger.info("Invoice generated: %s", invoice_number)
         return send_file(
             io.BytesIO(pdf_bytes),

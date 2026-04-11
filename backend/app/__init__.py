@@ -34,16 +34,15 @@ def create_app():
         return jsonify({"status": "ok"})
 
     with app.app_context():
-        # Drop any orphaned sequences left by previous failed deploys
-        # so that db.create_all() can recreate them cleanly with the table.
+        from app.models.user import User      # noqa: register with metadata
+        from app.models.settings import Settings  # noqa
+
+        # Drop orphaned sequences from previous failed deploys
         insp = inspect(db.engine)
         with db.engine.begin() as conn:
             for table in db.metadata.tables:
                 if not insp.has_table(table):
-                    seq = f"{table}_id_seq"
-                    conn.execute(text(f"DROP SEQUENCE IF EXISTS {seq}"))
+                    conn.execute(text(f"DROP SEQUENCE IF EXISTS {table}_id_seq"))
         db.create_all()
-        from app.models.settings import Settings
-        Settings.seed_defaults()
 
     return app
