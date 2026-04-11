@@ -48,21 +48,31 @@ npm run dev
 
 ### Backend → Render (free)
 
+Render's free web service + [Neon](https://neon.tech) free PostgreSQL = $0/month forever.
+
+#### Step 1 — Get a free Neon database
+
+1. Sign up at [neon.tech](https://neon.tech) (free, no credit card)
+2. Create a project → copy the **Connection string** (looks like `postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require`)
+
+#### Step 2 — Deploy on Render
+
 1. Push the repo to GitHub
 2. Go to [render.com](https://render.com) → New → Blueprint → select this repo
-   - Render will auto-detect `render.yaml` and create the web service + database
-3. Set the following environment variables in the Render dashboard (under the service → Environment):
+   - Render auto-detects `render.yaml` and sets up the free web service
+3. Fill in the environment variables when prompted:
    ```
+   DATABASE_URL      → paste your Neon connection string from Step 1
    PORTAL_PASSWORD   → your chosen password
    OPENAI_API_KEY    → from platform.openai.com/api-keys
    FRONTEND_URL      → https://your-app.vercel.app
    ```
-   (`DATABASE_URL` and `SECRET_KEY` are handled automatically by `render.yaml`)
+   (`SECRET_KEY` is auto-generated)
 4. Click **Apply**. First deploy takes ~5 min (installs system libs for WeasyPrint).
 5. Note your Render URL: `https://ca-portal-backend.onrender.com`
 
 > **Note:** Render's free web service spins down after 15 min of inactivity — first request
-> after idle takes ~30s to wake up. Free PostgreSQL is available for 90 days.
+> after idle takes ~30s to wake up. This is fine for a personal CA portal.
 
 #### Manual setup (without Blueprint)
 
