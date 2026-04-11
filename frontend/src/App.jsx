@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Login from './pages/Login'
 import InvoiceGenerator from './pages/InvoiceGenerator'
+import InvoiceHistory from './pages/InvoiceHistory'
+import TaxCalculator from './pages/TaxCalculator'
 import AdminPanel from './pages/AdminPanel'
 import Navbar from './components/Navbar'
 
@@ -34,6 +36,18 @@ export default function App() {
           <PrivateRoute>
             <Navbar />
             <InvoiceGenerator />
+          </PrivateRoute>
+        } />
+        <Route path="/history" element={
+          <PrivateRoute>
+            <Navbar />
+            <InvoiceHistory />
+          </PrivateRoute>
+        } />
+        <Route path="/tax" element={
+          <PrivateRoute>
+            <Navbar />
+            <TaxCalculator />
           </PrivateRoute>
         } />
         <Route path="/admin" element={
