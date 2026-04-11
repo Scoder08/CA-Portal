@@ -42,7 +42,7 @@ function Step({ number, label, active, done }) {
 
 export default function InvoiceGenerator() {
 
-  const [step, setStep] = useState(1) // 1=upload 2=review 3=preview 4=done
+  const [step, setStep] = useState(1) // 1=upload 1.5=deel-preview 2=review 3=preview 4=done
   const [uploading, setUploading] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [parsedData, setParsedData] = useState(null)
@@ -50,24 +50,30 @@ export default function InvoiceGenerator() {
   const [pdfFileName, setPdfFileName] = useState('')
   const [showRaw, setShowRaw] = useState(false)
   const [fileName, setFileName] = useState('')
+  const [deelPdfUrl, setDeelPdfUrl] = useState(null)
+  const [pendingFile, setPendingFile] = useState(null)
 
-  // ── Upload & parse ──────────────────────────────────────────────────────────
-  const onDrop = useCallback(async (acceptedFiles) => {
+  // ── Drop: show Deel PDF preview before parsing ──────────────────────────────
+  const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0]
     if (!file) return
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       toast.error('Please upload a PDF file')
       return
     }
-
+    if (deelPdfUrl) URL.revokeObjectURL(deelPdfUrl)
     setFileName(file.name)
+    setDeelPdfUrl(URL.createObjectURL(file))
+    setPendingFile(file)
+    setStep(1.5)
+  }, [deelPdfUrl])
+
+  // ── Parse after user confirms the preview ──────────────────────────────────
+  async function parseInvoice() {
+    if (!pendingFile) return
     setUploading(true)
-    setParsedData(null)
-    setStep(1)
-
     const formData = new FormData()
-    formData.append('file', file)
-
+    formData.append('file', pendingFile)
     try {
       const { data } = await api.post('/invoice/parse', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -80,7 +86,7 @@ export default function InvoiceGenerator() {
     } finally {
       setUploading(false)
     }
-  }, [])
+  }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -153,8 +159,11 @@ export default function InvoiceGenerator() {
 
   function reset() {
     if (pdfUrl) URL.revokeObjectURL(pdfUrl)
+    if (deelPdfUrl) URL.revokeObjectURL(deelPdfUrl)
     setPdfUrl(null)
     setPdfFileName('')
+    setDeelPdfUrl(null)
+    setPendingFile(null)
     setParsedData(null)
     setStep(1)
     setFileName('')
@@ -174,7 +183,7 @@ export default function InvoiceGenerator() {
 
       {/* Steps */}
       <div className="flex items-center gap-6 mb-8 animate-fade-up delay-100">
-        <Step number={1} label="Upload Deel PDF" active={step === 1} done={step > 1} />
+        <Step number={1} label="Upload" active={step === 1 || step === 1.5} done={step > 1.5} />
         <div className="h-px flex-1 bg-ink-200" />
         <Step number={2} label="Review & Edit" active={step === 2} done={step > 2} />
         <div className="h-px flex-1 bg-ink-200" />
@@ -231,6 +240,47 @@ export default function InvoiceGenerator() {
               AI reads your Deel invoice and extracts all fields — dates, amounts, client details — then generates your GSTIN-compliant invoice ready for STPI SOFTEX filing.
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Step 1.5: Deel PDF Preview ── */}
+      {step === 1.5 && deelPdfUrl && (
+        <div className="animate-fade-up space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-ink-500">
+              <FileText size={14} className="text-gold-500" />
+              <span className="font-mono text-xs bg-ink-100 px-2 py-0.5 rounded">{fileName}</span>
+              <span>— does this look right?</span>
+            </div>
+            <button onClick={reset} className="text-sm text-ink-400 hover:text-ink-700 flex items-center gap-1.5 transition-colors">
+              <RefreshCw size={13} /> Upload different file
+            </button>
+          </div>
+
+          <iframe
+            src={deelPdfUrl}
+            title="Deel Invoice Preview"
+            className="w-full rounded-xl border border-ink-200 shadow-sm"
+            style={{ height: '70vh' }}
+          />
+
+          <button
+            onClick={parseInvoice}
+            disabled={uploading}
+            className="btn-primary w-full py-3.5 rounded-xl text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {uploading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-ink-900/30 border-t-ink-900 rounded-full animate-spin" />
+                Parsing with AI…
+              </>
+            ) : (
+              <>
+                <Eye size={16} />
+                Looks good — Parse this Invoice
+              </>
+            )}
+          </button>
         </div>
       )}
 

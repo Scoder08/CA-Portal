@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { FileText, Settings, LogOut } from 'lucide-react'
+import { FileText, History, Calculator, Settings, LogOut } from 'lucide-react'
 
 export default function Navbar() {
   const location = useLocation()
@@ -41,11 +41,27 @@ export default function Navbar() {
             Invoices
           </Link>
           <Link
+            to="/history"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              isActive('/history') ? 'bg-ink-100 text-ink-800' : 'text-ink-500 hover:text-ink-800 hover:bg-ink-50'
+            }`}
+          >
+            <History size={14} />
+            History
+          </Link>
+          <Link
+            to="/tax"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              isActive('/tax') ? 'bg-ink-100 text-ink-800' : 'text-ink-500 hover:text-ink-800 hover:bg-ink-50'
+            }`}
+          >
+            <Calculator size={14} />
+            Tax
+          </Link>
+          <Link
             to="/admin"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-              isActive('/admin')
-                ? 'bg-ink-100 text-ink-800'
-                : 'text-ink-500 hover:text-ink-800 hover:bg-ink-50'
+              isActive('/admin') ? 'bg-ink-100 text-ink-800' : 'text-ink-500 hover:text-ink-800 hover:bg-ink-50'
             }`}
           >
             <Settings size={14} />

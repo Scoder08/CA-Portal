@@ -34,8 +34,9 @@ def create_app():
         return jsonify({"status": "ok"})
 
     with app.app_context():
-        from app.models.user import User      # noqa: register with metadata
+        from app.models.user import User          # noqa: register with metadata
         from app.models.settings import Settings  # noqa
+        from app.models.invoice import Invoice    # noqa
 
         # Drop orphaned sequences from previous failed deploys
         insp = inspect(db.engine)
