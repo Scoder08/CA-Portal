@@ -1,0 +1,36 @@
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
+from dotenv import load_dotenv
+import os
+
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"), override=True)
+
+db = SQLAlchemy()
+
+def create_app():
+    app = Flask(__name__)
+
+    CORS(app, resources={r"/api/*": {"origins": os.getenv("FRONTEND_URL", "*")}})
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///ca_portal.db")
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-change-in-prod")
+    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB upload limit
+
+    db.init_app(app)
+
+    from app.routes.auth import auth_bp
+    from app.routes.invoice import invoice_bp
+    from app.routes.admin import admin_bp
+
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(invoice_bp, url_prefix="/api/invoice")
+    app.register_blueprint(admin_bp, url_prefix="/api/admin")
+
+    with app.app_context():
+        db.create_all()
+        from app.models.settings import Settings
+        Settings.seed_defaults()
+
+    return app
