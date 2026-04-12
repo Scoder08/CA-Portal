@@ -17,3 +17,14 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      # CA AI Agent — set LLM_PROVIDER to: openai | anthropic | groq
+      - key: LLM_PROVIDER
+        value: openai
+      # LLM_MODEL is optional; leave blank to use the provider's default model
+      - key: LLM_MODEL
+        value: ""
+      # Set whichever API key matches LLM_PROVIDER (others can be left blank)
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false

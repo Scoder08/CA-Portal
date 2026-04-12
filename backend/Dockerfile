@@ -14,4 +14,5 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
-CMD gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+# Use gevent worker for SSE streaming support (handles concurrent long-lived connections)
+CMD gunicorn run:app --bind 0.0.0.0:$PORT --worker-class gevent --workers 1 --worker-connections 100 --timeout 120

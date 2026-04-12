@@ -24,10 +24,12 @@ def create_app():
     from app.routes.auth import auth_bp
     from app.routes.invoice import invoice_bp
     from app.routes.admin import admin_bp
+    from app.routes.agent import agent_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(invoice_bp, url_prefix="/api/invoice")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
+    app.register_blueprint(agent_bp, url_prefix="/api/agent")
 
     @app.route("/api/health")
     def health():
@@ -37,6 +39,7 @@ def create_app():
         from app.models.user import User          # noqa: register with metadata
         from app.models.settings import Settings  # noqa
         from app.models.invoice import Invoice    # noqa
+        from app.models.chat import ChatSession, ChatMessage  # noqa
 
         # Drop orphaned sequences from previous failed deploys
         insp = inspect(db.engine)
