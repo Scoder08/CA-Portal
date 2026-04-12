@@ -1,15 +1,31 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Login from './pages/Login'
+import Landing from './pages/Landing'
+import Dashboard from './pages/Dashboard'
 import InvoiceGenerator from './pages/InvoiceGenerator'
 import InvoiceHistory from './pages/InvoiceHistory'
 import TaxCalculator from './pages/TaxCalculator'
 import AdminPanel from './pages/AdminPanel'
 import Navbar from './components/Navbar'
+import ChatWidget from './components/ChatWidget'
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('ca_token')
   return token ? children : <Navigate to="/login" replace />
+}
+
+// Evaluated fresh on every route render — avoids stale isLoggedIn from App closure
+function HomeRoute() {
+  const token = localStorage.getItem('ca_token')
+  return token ? (
+    <>
+      <Navbar />
+      <Dashboard />
+    </>
+  ) : (
+    <Landing />
+  )
 }
 
 export default function App() {
@@ -30,9 +46,13 @@ export default function App() {
           error:   { iconTheme: { primary: '#e05c5c', secondary: '#fff' } },
         }}
       />
+      <ChatWidget />
       <Routes>
+        <Route path="/" element={<HomeRoute />} />
+
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={
+
+        <Route path="/invoices" element={
           <PrivateRoute>
             <Navbar />
             <InvoiceGenerator />

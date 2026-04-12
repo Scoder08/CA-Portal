@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { FileText, History, Calculator, Settings, LogOut } from 'lucide-react'
+import { Home, FileText, History, Calculator, Settings, LogOut } from 'lucide-react'
 
 export default function Navbar() {
   const location = useLocation()
@@ -33,6 +33,17 @@ export default function Navbar() {
             to="/"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
               isActive('/')
+                ? 'bg-ink-100 text-ink-800'
+                : 'text-ink-500 hover:text-ink-800 hover:bg-ink-50'
+            }`}
+          >
+            <Home size={14} />
+            Home
+          </Link>
+          <Link
+            to="/invoices"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              isActive('/invoices')
                 ? 'bg-ink-100 text-ink-800'
                 : 'text-ink-500 hover:text-ink-800 hover:bg-ink-50'
             }`}
