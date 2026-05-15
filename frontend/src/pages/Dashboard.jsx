@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  FileText, History, Calculator, Bot,
+  FileText, History, Calculator,
   TrendingUp, CheckCircle, Clock, ArrowRight,
   Zap,
 } from 'lucide-react'
@@ -152,14 +152,6 @@ export default function Dashboard() {
           desc="Estimate your tax under new & old regime with live forex."
           to="/tax"
           delay="0.15s"
-        />
-        <ActionCard
-          icon={Bot}
-          title="CA Assistant"
-          desc="Ask about GST, DTAA, advance tax, or anything CA-related."
-          to="#"
-          badge="AI"
-          delay="0.2s"
         />
       </div>
 

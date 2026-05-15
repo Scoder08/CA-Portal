@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { FileText, Calculator, Bot, ArrowRight, CheckCircle } from 'lucide-react'
+import { FileText, Calculator, ArrowRight, CheckCircle } from 'lucide-react'
 
 const FEATURES = [
   {
@@ -11,11 +11,6 @@ const FEATURES = [
     icon: Calculator,
     title: 'Tax Calculator',
     desc: 'New vs old regime. Section 44ADA. Live forex. Slab breakdown.',
-  },
-  {
-    icon: Bot,
-    title: 'CA AI Agent',
-    desc: 'Ask anything — GST, DTAA, advance tax. Powered by your own data.',
   },
 ]
 

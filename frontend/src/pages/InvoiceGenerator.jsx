@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import { Upload, FileText, Download, RefreshCw, CheckCircle, ChevronDown, ChevronUp, Edit3, Eye, Settings } from 'lucide-react'
 
@@ -41,6 +42,7 @@ function Step({ number, label, active, done }) {
 }
 
 export default function InvoiceGenerator() {
+  const navigate = useNavigate()
 
   const [step, setStep] = useState(1) // 1=upload 1.5=deel-preview 2=review 3=preview 4=done
   const [uploading, setUploading] = useState(false)
@@ -54,13 +56,13 @@ export default function InvoiceGenerator() {
   const [pendingFile, setPendingFile] = useState(null)
 
   // ── Drop: show Deel PDF preview before parsing ──────────────────────────────
-  const onDrop = useCallback((acceptedFiles) => {
-    const file = acceptedFiles[0]
-    if (!file) return
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
+  const onDrop = useCallback((acceptedFiles, fileRejections) => {
+    if (fileRejections.length > 0) {
       toast.error('Please upload a PDF file')
       return
     }
+    const file = acceptedFiles[0]
+    if (!file) return
     if (deelPdfUrl) URL.revokeObjectURL(deelPdfUrl)
     setFileName(file.name)
     setDeelPdfUrl(URL.createObjectURL(file))
@@ -88,10 +90,14 @@ export default function InvoiceGenerator() {
     }
   }
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
-    accept: { 'application/pdf': ['.pdf'] },
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/octet-stream': ['.pdf'], // macOS sometimes reports PDFs with this type
+    },
     maxFiles: 1,
+    noClick: false,
     disabled: uploading,
   })
 
@@ -223,7 +229,15 @@ export default function InvoiceGenerator() {
                   <p className="font-semibold text-ink-700 text-lg">
                     {isDragActive ? 'Drop your Deel invoice here' : 'Drop your Deel invoice PDF'}
                   </p>
-                  <p className="text-sm text-ink-400 mt-1">or <span className="text-gold-500 font-medium">click to browse</span></p>
+                  <p className="text-sm text-ink-400 mt-1">or{' '}
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); open() }}
+                      className="text-gold-500 font-medium hover:underline focus:outline-none"
+                    >
+                      click to browse
+                    </button>
+                  </p>
                 </div>
                 <p className="text-xs text-ink-300 bg-ink-100 px-3 py-1.5 rounded-full">
                   PDF files only · Max 16MB
@@ -453,7 +467,7 @@ export default function InvoiceGenerator() {
               Download Invoice
             </button>
             <button
-              onClick={() => window.open('/admin', '_blank')}
+              onClick={() => navigate('/admin')}
               className="px-5 py-3.5 rounded-xl font-medium border border-ink-200 text-ink-600 hover:bg-ink-100 transition-colors text-sm flex items-center gap-2"
             >
               <Settings size={15} />

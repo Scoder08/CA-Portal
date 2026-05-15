@@ -8,7 +8,6 @@ import InvoiceHistory from './pages/InvoiceHistory'
 import TaxCalculator from './pages/TaxCalculator'
 import AdminPanel from './pages/AdminPanel'
 import Navbar from './components/Navbar'
-import ChatWidget from './components/ChatWidget'
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('ca_token')
@@ -46,7 +45,6 @@ export default function App() {
           error:   { iconTheme: { primary: '#e05c5c', secondary: '#fff' } },
         }}
       />
-      <ChatWidget />
       <Routes>
         <Route path="/" element={<HomeRoute />} />
 
