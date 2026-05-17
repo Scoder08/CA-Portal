@@ -9,7 +9,7 @@ export default function Navbar() {
   function logout() {
     localStorage.removeItem('ca_token')
     localStorage.removeItem('ca_user')
-    navigate('/')
+    navigate('/login')
   }
 
   const isActive = (path) => location.pathname === path

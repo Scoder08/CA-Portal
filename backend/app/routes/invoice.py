@@ -7,10 +7,28 @@ from app import db
 import io
 import json
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
 invoice_bp = Blueprint("invoice", __name__)
+
+# ── Per-user in-memory cache for read-heavy endpoints ─────────────────────────
+_cache: dict[int, dict] = {}      # user_id -> {key: value, _ts_key: timestamp}
+_CACHE_TTL = 30                    # seconds
+
+def _cache_get(user_id: int, key: str):
+    entry = _cache.get(user_id, {})
+    if time.time() - entry.get(f"_ts_{key}", 0) < _CACHE_TTL:
+        return entry.get(key)
+    return None
+
+def _cache_set(user_id: int, key: str, value):
+    _cache.setdefault(user_id, {})[key] = value
+    _cache[user_id][f"_ts_{key}"] = time.time()
+
+def _cache_invalidate(user_id: int):
+    _cache.pop(user_id, None)
 
 
 def _save_invoice(user_id: int, parsed_data: dict, invoice_number: str) -> Invoice:
@@ -73,6 +91,7 @@ def generate_invoice():
     try:
         pdf_bytes, invoice_number = render_invoice_pdf(parsed_data, g.user_id)
         _save_invoice(g.user_id, parsed_data, invoice_number)
+        _cache_invalidate(g.user_id)
         logger.info("Invoice generated and saved: %s", invoice_number)
         return send_file(
             io.BytesIO(pdf_bytes),
@@ -114,33 +133,43 @@ def download_invoice(invoice_id):
 @invoice_bp.route("/history", methods=["GET"])
 @require_auth
 def invoice_history():
+    cached = _cache_get(g.user_id, "history")
+    if cached is not None:
+        return jsonify(cached)
     invoices = (
         Invoice.query
         .filter_by(user_id=g.user_id)
         .order_by(Invoice.created_at.desc())
         .all()
     )
-    return jsonify([inv.to_dict() for inv in invoices])
+    result = [inv.to_dict() for inv in invoices]
+    _cache_set(g.user_id, "history", result)
+    return jsonify(result)
 
 
 @invoice_bp.route("/stats", methods=["GET"])
 @require_auth
 def invoice_stats():
+    cached = _cache_get(g.user_id, "stats")
+    if cached is not None:
+        return jsonify(cached)
     invoices = Invoice.query.filter_by(user_id=g.user_id).all()
     total = sum(i.amount for i in invoices)
     paid = sum(i.amount for i in invoices if i.status == "paid")
     monthly: dict[str, float] = {}
     for inv in invoices:
         if inv.issue_date and len(inv.issue_date) >= 7:
-            key = inv.issue_date[:7]
-            monthly[key] = monthly.get(key, 0) + inv.amount
-    return jsonify({
+            k = inv.issue_date[:7]
+            monthly[k] = monthly.get(k, 0) + inv.amount
+    result = {
         "total": total,
         "paid": paid,
         "unpaid": total - paid,
         "count": len(invoices),
         "monthly": [{"month": k, "amount": v} for k, v in sorted(monthly.items())],
-    })
+    }
+    _cache_set(g.user_id, "stats", result)
+    return jsonify(result)
 
 
 # ── Single update / delete ─────────────────────────────────────────────────────
@@ -156,6 +185,7 @@ def update_status(invoice_id):
         return jsonify({"error": "status must be 'paid' or 'unpaid'"}), 400
     inv.status = status
     db.session.commit()
+    _cache_invalidate(g.user_id)
     return jsonify(inv.to_dict())
 
 
@@ -167,6 +197,7 @@ def delete_invoice(invoice_id):
         return jsonify({"error": "Invoice not found"}), 404
     db.session.delete(inv)
     db.session.commit()
+    _cache_invalidate(g.user_id)
     return jsonify({"success": True})
 
 
@@ -184,6 +215,7 @@ def bulk_status():
         Invoice.id.in_(ids), Invoice.user_id == g.user_id
     ).update({"status": status}, synchronize_session=False)
     db.session.commit()
+    _cache_invalidate(g.user_id)
     return jsonify({"success": True, "updated": len(ids)})
 
 
@@ -195,4 +227,5 @@ def bulk_delete():
         Invoice.id.in_(ids), Invoice.user_id == g.user_id
     ).delete(synchronize_session=False)
     db.session.commit()
+    _cache_invalidate(g.user_id)
     return jsonify({"success": True, "deleted": deleted})
